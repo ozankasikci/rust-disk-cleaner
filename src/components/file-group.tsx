@@ -14,7 +14,6 @@ interface FileGroupProps {
   onOpenInFinder: (path: string) => void
 }
 
-// Size display with color coding based on file size
 function SizeDisplay({ size }: { size: number }) {
   const formatted = formatBytes(size)
   const colorClass = size > 1_000_000_000 ? "text-destructive" :
@@ -28,7 +27,6 @@ function SizeDisplay({ size }: { size: number }) {
   )
 }
 
-// Collapsible file group component
 export function FileGroup({
   subcategory,
   items,
