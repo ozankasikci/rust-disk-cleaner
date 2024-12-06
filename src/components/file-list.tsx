@@ -10,6 +10,7 @@ interface FileListProps {
   onOpenInFinder: (path: string) => void
 }
 
+// Main file list with grouped items
 export function FileList({
   items,
   selectedIds,
