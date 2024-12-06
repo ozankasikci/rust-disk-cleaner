@@ -28,6 +28,7 @@ function SizeDisplay({ size }: { size: number }) {
   )
 }
 
+// Collapsible file group component
 export function FileGroup({
   subcategory,
   items,
