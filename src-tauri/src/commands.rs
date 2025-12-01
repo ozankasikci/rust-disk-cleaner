@@ -14,6 +14,7 @@ pub async fn scan_category(category: String) -> Result<ScanResult, String> {
 
     let items = match category.as_str() {
         "caches" => scanner.scan_caches(),
+        "dev-artifacts" => scanner.scan_dev_artifacts(),
         _ => return Err(format!("Unknown category: {}", category)),
     };
 
