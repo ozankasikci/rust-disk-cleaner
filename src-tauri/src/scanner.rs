@@ -61,4 +61,46 @@ impl Scanner {
         items.sort_by(|a, b| b.size.cmp(&a.size));
         items
     }
+
+    pub fn scan_dev_artifacts(&self) -> Vec<ScannedItem> {
+        let mut items = Vec::new();
+        let artifact_names = ["node_modules", "target", ".build", "build", "dist", ".next"];
+
+        for base in ["Projects", "Developer", "Code"] {
+            let dir = self.home_dir.join(base);
+            if dir.exists() {
+                self.find_artifacts(&dir, &artifact_names, &mut items, 0);
+            }
+        }
+
+        items.sort_by(|a, b| b.size.cmp(&a.size));
+        items
+    }
+
+    fn find_artifacts(&self, dir: &PathBuf, names: &[&str], items: &mut Vec<ScannedItem>, depth: usize) {
+        if depth > 5 { return; }
+
+        if let Ok(entries) = fs::read_dir(dir) {
+            for entry in entries.flatten() {
+                let path = entry.path();
+                if path.is_dir() {
+                    let name = path.file_name().unwrap_or_default().to_string_lossy();
+                    if names.contains(&name.as_ref()) {
+                        let size = self.get_dir_size(&path);
+                        if size > 10_000_000 {
+                            items.push(ScannedItem {
+                                id: path.to_string_lossy().to_string(),
+                                name: name.to_string(),
+                                path: path.to_string_lossy().to_string(),
+                                size,
+                                item_type: "dev-artifact".to_string(),
+                            });
+                        }
+                    } else if !name.starts_with('.') {
+                        self.find_artifacts(&path, names, items, depth + 1);
+                    }
+                }
+            }
+        }
+    }
 }
