@@ -35,4 +35,30 @@ impl Scanner {
         }
         size
     }
+
+    pub fn scan_caches(&self) -> Vec<ScannedItem> {
+        let mut items = Vec::new();
+        let cache_dir = self.home_dir.join("Library/Caches");
+
+        if let Ok(entries) = fs::read_dir(&cache_dir) {
+            for entry in entries.flatten() {
+                let path = entry.path();
+                if path.is_dir() {
+                    let size = self.get_dir_size(&path);
+                    if size > 1_000_000 {
+                        items.push(ScannedItem {
+                            id: path.to_string_lossy().to_string(),
+                            name: path.file_name().unwrap_or_default().to_string_lossy().to_string(),
+                            path: path.to_string_lossy().to_string(),
+                            size,
+                            item_type: "cache".to_string(),
+                        });
+                    }
+                }
+            }
+        }
+
+        items.sort_by(|a, b| b.size.cmp(&a.size));
+        items
+    }
 }
