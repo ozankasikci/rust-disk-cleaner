@@ -1,19 +1,25 @@
 mod commands;
+mod config;
 mod scanner;
+mod categorizer;
 mod trash;
 
-use commands::*;
+use commands::{
+    scan_category, delete_items, list_trash, restore_items, purge_trash, permanently_delete,
+    permanently_delete_items, AppState,
+};
 use trash::TrashManager;
 use std::sync::Mutex;
 
-pub struct AppState {
-    pub trash_manager: Mutex<TrashManager>,
-}
-
+#[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
+    let trash_manager = TrashManager::new()
+        .expect("Failed to initialize trash manager");
+
     tauri::Builder::default()
+        .plugin(tauri_plugin_opener::init())
         .manage(AppState {
-            trash_manager: Mutex::new(TrashManager::new()),
+            trash_manager: Mutex::new(trash_manager),
         })
         .invoke_handler(tauri::generate_handler![
             scan_category,
@@ -22,8 +28,8 @@ pub fn run() {
             restore_items,
             purge_trash,
             permanently_delete,
-            permanently_delete_items,
+            permanently_delete_items
         ])
         .run(tauri::generate_context!())
-        .expect("error running app");
+        .expect("error while running tauri application");
 }
