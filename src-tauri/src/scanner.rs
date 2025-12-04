@@ -107,4 +107,82 @@ impl Scanner {
             "Other".to_string()
         }
     }
+
+    pub fn scan_dev_artifacts(&self) -> Vec<ScannedItem> {
+        let mut items = Vec::new();
+        let dev_dirs = vec![
+            self.home_dir.join("Projects"),
+            self.home_dir.join("Developer"),
+            self.home_dir.join("Code"),
+            self.home_dir.join("repos"),
+            self.home_dir.join("src"),
+        ];
+
+        let artifact_patterns = [
+            ("node_modules", "npm"),
+            ("target", "rust"),
+            (".build", "swift"),
+            ("build", "build"),
+            ("dist", "dist"),
+            (".next", "nextjs"),
+            ("__pycache__", "python"),
+            (".pytest_cache", "python"),
+            ("venv", "python"),
+            (".venv", "python"),
+            ("vendor", "vendor"),
+            ("Pods", "cocoapods"),
+        ];
+
+        for base_dir in dev_dirs {
+            if base_dir.exists() {
+                self.find_dev_artifacts(&base_dir, &artifact_patterns, &mut items, 0);
+            }
+        }
+
+        items.sort_by(|a, b| b.size.cmp(&a.size));
+        items
+    }
+
+    fn find_dev_artifacts(
+        &self,
+        dir: &PathBuf,
+        patterns: &[(&str, &str)],
+        items: &mut Vec<ScannedItem>,
+        depth: usize,
+    ) {
+        if depth > 6 {
+            return;
+        }
+
+        if let Ok(entries) = fs::read_dir(dir) {
+            for entry in entries.flatten() {
+                let path = entry.path();
+                if path.is_symlink() {
+                    continue;
+                }
+                if path.is_dir() {
+                    let name = path.file_name()
+                        .unwrap_or_default()
+                        .to_string_lossy()
+                        .to_string();
+
+                    if let Some((_, group)) = patterns.iter().find(|(p, _)| *p == name) {
+                        let size = self.get_dir_size(&path);
+                        if size > 10_000_000 {
+                            items.push(ScannedItem {
+                                id: path.to_string_lossy().to_string(),
+                                name: name.clone(),
+                                path: path.to_string_lossy().to_string(),
+                                size,
+                                item_type: "dev-artifact".to_string(),
+                                group: Some(group.to_string()),
+                            });
+                        }
+                    } else if !name.starts_with('.') && name != "node_modules" && name != "target" {
+                        self.find_dev_artifacts(&path, patterns, items, depth + 1);
+                    }
+                }
+            }
+        }
+    }
 }
