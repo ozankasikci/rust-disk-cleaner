@@ -6,8 +6,13 @@
   :root {
     --background: 222 47% 11%;
     --foreground: 210 40% 98%;
+    --card: 222 47% 13%;
+    --card-foreground: 210 40% 98%;
     --primary: 174 100% 41%;
     --primary-foreground: 0 0% 100%;
+    --muted: 217 33% 17%;
+    --muted-foreground: 215 20% 65%;
+    --border: 217 33% 20%;
   }
 }
 
@@ -19,4 +24,6 @@
 
 body {
   font-family: system-ui, sans-serif;
+  background: hsl(var(--background));
+  color: hsl(var(--foreground));
 }
