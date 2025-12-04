@@ -185,4 +185,91 @@ impl Scanner {
             }
         }
     }
+
+    pub fn scan_large_files(&self, min_size_mb: u64) -> Vec<ScannedItem> {
+        let min_size = min_size_mb * 1024 * 1024;
+        let mut items = Vec::new();
+
+        let scan_dirs = vec![
+            self.home_dir.join("Downloads"),
+            self.home_dir.join("Documents"),
+            self.home_dir.join("Desktop"),
+            self.home_dir.join("Movies"),
+        ];
+
+        for dir in scan_dirs {
+            if dir.exists() {
+                self.find_large_files(&dir, min_size, &mut items, 0);
+            }
+        }
+
+        items.sort_by(|a, b| b.size.cmp(&a.size));
+        items
+    }
+
+    fn find_large_files(
+        &self,
+        dir: &PathBuf,
+        min_size: u64,
+        items: &mut Vec<ScannedItem>,
+        depth: usize,
+    ) {
+        if depth > 10 {
+            return;
+        }
+
+        if let Ok(entries) = fs::read_dir(dir) {
+            for entry in entries.flatten() {
+                let path = entry.path();
+                if path.is_symlink() {
+                    continue;
+                }
+
+                if path.is_file() {
+                    if let Ok(meta) = fs::metadata(&path) {
+                        let size = meta.len();
+                        if size >= min_size {
+                            let name = path.file_name()
+                                .unwrap_or_default()
+                                .to_string_lossy()
+                                .to_string();
+                            items.push(ScannedItem {
+                                id: path.to_string_lossy().to_string(),
+                                name,
+                                path: path.to_string_lossy().to_string(),
+                                size,
+                                item_type: "large-file".to_string(),
+                                group: Some(self.get_file_type_group(&path)),
+                            });
+                        }
+                    }
+                } else if path.is_dir() {
+                    let name = path.file_name()
+                        .unwrap_or_default()
+                        .to_string_lossy()
+                        .to_string();
+                    if !name.starts_with('.') {
+                        self.find_large_files(&path, min_size, items, depth + 1);
+                    }
+                }
+            }
+        }
+    }
+
+    fn get_file_type_group(&self, path: &PathBuf) -> String {
+        let ext = path.extension()
+            .map(|e| e.to_string_lossy().to_lowercase())
+            .unwrap_or_default();
+
+        match ext.as_str() {
+            "mp4" | "mov" | "avi" | "mkv" | "webm" => "Videos",
+            "mp3" | "wav" | "flac" | "aac" | "m4a" => "Audio",
+            "zip" | "tar" | "gz" | "rar" | "7z" => "Archives",
+            "dmg" | "pkg" | "iso" => "Installers",
+            "pdf" | "doc" | "docx" | "xls" | "xlsx" => "Documents",
+            "jpg" | "jpeg" | "png" | "gif" | "heic" | "raw" => "Images",
+            _ => "Other",
+        }
+        .to_string()
+    }
 }
