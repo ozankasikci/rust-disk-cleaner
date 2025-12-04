@@ -1,5 +1,6 @@
+import { Checkbox } from "@/components/ui/checkbox"
 import { ScrollArea } from "@/components/ui/scroll-area"
-import { FileGroup } from "./file-group"
+import { formatBytes } from "@/lib/format"
 import type { ScannedItem } from "@/types"
 
 interface FileListProps {
@@ -15,38 +16,50 @@ export function FileList({
   selectedIds,
   onToggleItem,
   onToggleAll,
-  onOpenInFinder,
+  onOpenInFinder
 }: FileListProps) {
-  // Group items by subcategory
-  const groups = items.reduce<Record<string, ScannedItem[]>>((acc, item) => {
-    const key = item.subcategory
-    if (!acc[key]) {
-      acc[key] = []
-    }
-    acc[key].push(item)
+  // Group items by their group property
+  const groups = items.reduce((acc, item) => {
+    const group = item.group || "Other"
+    if (!acc[group]) acc[group] = []
+    acc[group].push(item)
     return acc
-  }, {})
-
-  // Sort groups by total size
-  const sortedGroups = Object.entries(groups).sort((a, b) => {
-    const sizeA = a[1].reduce((sum, item) => sum + item.size, 0)
-    const sizeB = b[1].reduce((sum, item) => sum + item.size, 0)
-    return sizeB - sizeA
-  })
+  }, {} as Record<string, ScannedItem[]>)
 
   return (
     <ScrollArea className="h-full">
-      <div className="divide-y divide-border/40">
-        {sortedGroups.map(([subcategory, groupItems]) => (
-          <FileGroup
-            key={subcategory}
-            subcategory={subcategory}
-            items={groupItems}
-            selectedIds={selectedIds}
-            onToggleItem={onToggleItem}
-            onToggleAll={onToggleAll}
-            onOpenInFinder={onOpenInFinder}
-          />
+      <div className="p-4 space-y-4">
+        {Object.entries(groups).map(([group, groupItems]) => (
+          <div key={group}>
+            <div className="flex items-center gap-2 mb-2">
+              <h3 className="font-semibold text-sm">{group}</h3>
+              <span className="text-xs text-muted-foreground">
+                {groupItems.length} items
+              </span>
+            </div>
+            <div className="space-y-1">
+              {groupItems.map((item) => (
+                <div
+                  key={item.id}
+                  className="flex items-center gap-3 p-2 rounded hover:bg-muted/50"
+                >
+                  <Checkbox
+                    checked={selectedIds.has(item.id)}
+                    onCheckedChange={() => onToggleItem(item.id)}
+                  />
+                  <div className="flex-1 min-w-0">
+                    <p className="truncate text-sm">{item.name}</p>
+                    <p className="truncate text-xs text-muted-foreground">
+                      {item.path}
+                    </p>
+                  </div>
+                  <span className="font-mono text-sm shrink-0">
+                    {formatBytes(item.size)}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
         ))}
       </div>
     </ScrollArea>
