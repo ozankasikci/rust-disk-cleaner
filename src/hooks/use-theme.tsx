@@ -1,6 +1,8 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react"
 
-export type ThemeId = "midnight" | "sunset" | "forest" | "ocean" | "lavender"
+export type ThemeId =
+  | "midnight" | "sunset" | "forest" | "ocean" | "lavender"
+  | "ember" | "arctic" | "slate" | "neon" | "sandstone"
 
 export interface Theme {
   id: ThemeId
@@ -14,6 +16,11 @@ export const themes: Theme[] = [
   { id: "forest", name: "Forest", isDark: true },
   { id: "ocean", name: "Ocean", isDark: true },
   { id: "lavender", name: "Lavender", isDark: true },
+  { id: "ember", name: "Ember", isDark: true },
+  { id: "arctic", name: "Arctic", isDark: false },
+  { id: "slate", name: "Slate", isDark: false },
+  { id: "neon", name: "Neon", isDark: true },
+  { id: "sandstone", name: "Sandstone", isDark: false },
 ]
 
 interface ThemeContextValue {
@@ -23,20 +30,36 @@ interface ThemeContextValue {
 }
 
 const ThemeContext = createContext<ThemeContextValue | null>(null)
+const STORAGE_KEY = "rustdiskcleaner-theme"
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
-  const [theme, setTheme] = useState<ThemeId>("midnight")
+  const [theme, setThemeState] = useState<ThemeId>(() => {
+    if (typeof window !== "undefined") {
+      const stored = localStorage.getItem(STORAGE_KEY)
+      if (stored && themes.some((t) => t.id === stored)) {
+        return stored as ThemeId
+      }
+    }
+    return "midnight"
+  })
 
   const currentTheme = themes.find((t) => t.id === theme) || themes[0]
 
   useEffect(() => {
+    localStorage.setItem(STORAGE_KEY, theme)
     const root = document.documentElement
     themes.forEach((t) => root.classList.remove(`theme-${t.id}`))
     root.classList.add(`theme-${theme}`)
-  }, [theme])
+
+    if (currentTheme.isDark) {
+      root.classList.remove("light")
+    } else {
+      root.classList.add("light")
+    }
+  }, [theme, currentTheme])
 
   return (
-    <ThemeContext.Provider value={{ theme, setTheme, currentTheme }}>
+    <ThemeContext.Provider value={{ theme, setTheme: setThemeState, currentTheme }}>
       {children}
     </ThemeContext.Provider>
   )
