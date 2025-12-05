@@ -35,7 +35,7 @@ export function FileList({
   })
 
   return (
-    <ScrollArea className="h-full">
+    <ScrollArea data-testid="file-list" className="h-full">
       <div className="divide-y divide-border/40">
         {sortedGroups.map(([subcategory, groupItems]) => (
           <FileGroup
