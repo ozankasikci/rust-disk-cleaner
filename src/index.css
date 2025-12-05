@@ -63,3 +63,21 @@ body {
 .icon-container-lg {
   @apply flex h-10 w-10 items-center justify-center rounded-xl;
 }
+
+@keyframes pulse-glow {
+  0%, 100% { box-shadow: 0 0 0 0 hsl(var(--primary) / 0.4); }
+  50% { box-shadow: 0 0 12px 4px hsl(var(--primary) / 0.2); }
+}
+
+.animate-pulse-glow {
+  animation: pulse-glow 2s ease-in-out infinite;
+}
+
+@keyframes scanning {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.05); opacity: 0.8; }
+}
+
+.animate-scanning {
+  animation: scanning 1.5s ease-in-out infinite;
+}
