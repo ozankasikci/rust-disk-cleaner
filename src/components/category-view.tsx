@@ -184,7 +184,7 @@ export function CategoryView({ category, onStatsUpdate, scanData, onScanDataUpda
   const Icon = info.icon
 
   return (
-    <div className="flex h-full flex-col bg-background">
+    <div role="region" className="flex h-full flex-col bg-background">
       {error && (
         <ErrorBanner message={error} />
       )}
