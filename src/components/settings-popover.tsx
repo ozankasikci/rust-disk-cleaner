@@ -2,7 +2,7 @@ import { Settings, Check } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import {
   Popover,
-  PopoverContent,
+  PopoverContent aria-labelledby="settings-title",
   PopoverTrigger,
 } from "@/components/ui/popover"
 import { useTheme, themes } from "@/hooks/use-theme"
@@ -22,7 +22,7 @@ export function SettingsPopover() {
           <Settings className="h-4 w-4" />
         </Button>
       </PopoverTrigger>
-      <PopoverContent
+      <PopoverContent aria-labelledby="settings-title"
         side="top"
         align="start"
         className="w-72 p-3"
@@ -69,7 +69,7 @@ export function SettingsPopover() {
             ))}
           </div>
         </div>
-      </PopoverContent>
+      </PopoverContent aria-labelledby="settings-title">
     </Popover>
   )
 }
