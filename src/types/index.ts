@@ -1,4 +1,3 @@
-/** Represents a scanned file item */
 export interface ScannedItem {
   id: string
   path: string
@@ -14,7 +13,6 @@ export interface ScanResult {
   item_count: number
 }
 
-/** Represents an item in the trash */
 export interface TrashItem {
   id: string
   original_path: string

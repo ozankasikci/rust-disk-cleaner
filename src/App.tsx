@@ -105,7 +105,6 @@ function loadCachedStats(): Record<CategoryId, CategoryStats | null> {
   }
 }
 
-// Main application component
 function App() {
   const [selectedCategory, setSelectedCategory] = useState<CategoryId>("caches")
   const [stats, setStats] = useState<Record<CategoryId, CategoryStats | null>>(loadCachedStats)

@@ -6,7 +6,6 @@
 
 @custom-variant dark (&:is(.dark *));
 
-/* Theme configuration */
 @theme inline {
   --font-mono: 'JetBrains Mono', ui-monospace, monospace;
   --font-sans: 'Inter', system-ui, sans-serif;

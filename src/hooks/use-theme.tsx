@@ -33,8 +33,7 @@ export interface Theme {
   }
 }
 
-export // Theme configuration
-const themes: Theme[] = [
+export const themes: Theme[] = [
   // Dark themes
   { id: "midnight", name: "Midnight", description: "Deep dark with teal", isDark: true, preview: { bg: "#1a1a2e", accent: "#4fd1c5" } },
   { id: "sunset", name: "Sunset", description: "Warm coral tones", isDark: true, preview: { bg: "#1f1a1a", accent: "#f97316" } },
