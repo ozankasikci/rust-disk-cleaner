@@ -43,3 +43,11 @@ body {
   color: hsl(var(--foreground));
   -webkit-font-smoothing: antialiased;
 }
+
+.empty-state {
+  @apply flex flex-1 flex-col items-center justify-center gap-4 p-8;
+}
+
+.empty-state-icon {
+  @apply flex h-16 w-16 items-center justify-center rounded-2xl bg-muted/50;
+}
