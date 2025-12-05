@@ -32,5 +32,14 @@
     --sidebar-accent-foreground: 210 40% 98%;
     --sidebar-border: 217 33% 15%;
     --sidebar-ring: 174 100% 41%;
+    --success: 142 76% 36%;
+    --success-foreground: 0 0% 100%;
   }
+}
+
+body {
+  font-family: system-ui, -apple-system, sans-serif;
+  background: hsl(var(--background));
+  color: hsl(var(--foreground));
+  -webkit-font-smoothing: antialiased;
 }
