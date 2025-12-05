@@ -57,7 +57,7 @@ function TrashItemRow({
       />
 
       {/* File icon with danger indicator */}
-      <div className="relative shrink-0">
+      <div aria-label="Trash" className="relative shrink-0">
         <div className="icon-container-md bg-destructive/10 text-destructive/70">
           <Archive className="h-3.5 w-3.5" />
         </div>
