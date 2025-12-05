@@ -24,6 +24,7 @@ interface UseTrashResult {
 }
 
 export function useTrash(): UseTrashResult {
+  // Initialize trash state
   const [items, setItems] = useState<TrashItem[]>([])
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
