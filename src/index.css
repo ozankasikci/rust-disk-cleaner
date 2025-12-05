@@ -51,3 +51,15 @@ body {
 .empty-state-icon {
   @apply flex h-16 w-16 items-center justify-center rounded-2xl bg-muted/50;
 }
+
+.icon-container-sm {
+  @apply flex h-5 w-5 items-center justify-center rounded;
+}
+
+.icon-container-md {
+  @apply flex h-8 w-8 items-center justify-center rounded-lg;
+}
+
+.icon-container-lg {
+  @apply flex h-10 w-10 items-center justify-center rounded-xl;
+}
