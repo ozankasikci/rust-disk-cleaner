@@ -1,7 +1,6 @@
 use serde::{Deserialize, Serialize};
 use std::fs;
 use std::path::PathBuf;
-use std::collections::HashMap;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ScannedItem {
@@ -81,7 +80,53 @@ impl Scanner {
     }
 
     pub fn scan_dev_artifacts(&self) -> Vec<ScannedItem> {
-        Vec::new()
+        let mut items = Vec::new();
+        let patterns = [
+            ("node_modules", "npm"),
+            ("target", "rust"),
+            (".next", "nextjs"),
+            ("dist", "build"),
+            ("build", "build"),
+        ];
+
+        for base in ["Projects", "Developer", "Code"] {
+            let dir = self.home_dir.join(base);
+            if dir.exists() {
+                self.find_artifacts(&dir, &patterns, &mut items, 0);
+            }
+        }
+
+        items.sort_by(|a, b| b.size.cmp(&a.size));
+        items
+    }
+
+    fn find_artifacts(&self, dir: &PathBuf, patterns: &[(&str, &str)], items: &mut Vec<ScannedItem>, depth: usize) {
+        if depth > 6 { return; }
+
+        if let Ok(entries) = fs::read_dir(dir) {
+            for entry in entries.flatten() {
+                let path = entry.path();
+                if path.is_symlink() { continue; }
+                if path.is_dir() {
+                    let name = path.file_name().unwrap_or_default().to_string_lossy().to_string();
+                    if let Some((_, group)) = patterns.iter().find(|(p, _)| *p == name) {
+                        let size = self.get_dir_size(&path);
+                        if size > 10_000_000 {
+                            items.push(ScannedItem {
+                                id: path.to_string_lossy().to_string(),
+                                name: name.clone(),
+                                path: path.to_string_lossy().to_string(),
+                                size,
+                                item_type: "dev-artifact".to_string(),
+                                group: Some(group.to_string()),
+                            });
+                        }
+                    } else if !name.starts_with('.') {
+                        self.find_artifacts(&path, patterns, items, depth + 1);
+                    }
+                }
+            }
+        }
     }
 
     pub fn scan_large_files(&self, _min_mb: u64) -> Vec<ScannedItem> {
