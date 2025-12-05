@@ -64,6 +64,18 @@ body {
   @apply flex h-10 w-10 items-center justify-center rounded-xl;
 }
 
+.text-mono-small {
+  @apply font-mono text-xs tabular-nums;
+}
+
+.text-mono-value {
+  @apply font-mono text-lg font-semibold tabular-nums;
+}
+
+.text-description {
+  @apply text-sm text-muted-foreground leading-relaxed;
+}
+
 @keyframes pulse-glow {
   0%, 100% { box-shadow: 0 0 0 0 hsl(var(--primary) / 0.4); }
   50% { box-shadow: 0 0 12px 4px hsl(var(--primary) / 0.2); }
