@@ -129,8 +129,62 @@ impl Scanner {
         }
     }
 
-    pub fn scan_large_files(&self, _min_mb: u64) -> Vec<ScannedItem> {
-        Vec::new()
+    pub fn scan_large_files(&self, min_mb: u64) -> Vec<ScannedItem> {
+        let min_size = min_mb * 1024 * 1024;
+        let mut items = Vec::new();
+
+        for dir_name in ["Downloads", "Documents", "Desktop", "Movies"] {
+            let dir = self.home_dir.join(dir_name);
+            if dir.exists() {
+                self.find_large_files(&dir, min_size, &mut items, 0);
+            }
+        }
+
+        items.sort_by(|a, b| b.size.cmp(&a.size));
+        items
+    }
+
+    fn find_large_files(&self, dir: &PathBuf, min: u64, items: &mut Vec<ScannedItem>, depth: usize) {
+        if depth > 10 { return; }
+
+        if let Ok(entries) = fs::read_dir(dir) {
+            for entry in entries.flatten() {
+                let path = entry.path();
+                if path.is_symlink() { continue; }
+
+                if path.is_file() {
+                    if let Ok(meta) = fs::metadata(&path) {
+                        if meta.len() >= min {
+                            let name = path.file_name().unwrap_or_default().to_string_lossy().to_string();
+                            items.push(ScannedItem {
+                                id: path.to_string_lossy().to_string(),
+                                name,
+                                path: path.to_string_lossy().to_string(),
+                                size: meta.len(),
+                                item_type: "large-file".to_string(),
+                                group: Some(self.file_type_group(&path)),
+                            });
+                        }
+                    }
+                } else if path.is_dir() {
+                    let name = path.file_name().unwrap_or_default().to_string_lossy();
+                    if !name.starts_with('.') {
+                        self.find_large_files(&path, min, items, depth + 1);
+                    }
+                }
+            }
+        }
+    }
+
+    fn file_type_group(&self, path: &PathBuf) -> String {
+        let ext = path.extension().map(|e| e.to_string_lossy().to_lowercase()).unwrap_or_default();
+        match ext.as_str() {
+            "mp4" | "mov" | "avi" | "mkv" => "Videos",
+            "mp3" | "wav" | "flac" => "Audio",
+            "zip" | "tar" | "gz" | "rar" => "Archives",
+            "dmg" | "pkg" | "iso" => "Installers",
+            _ => "Other",
+        }.into()
     }
 
     pub fn scan_downloads(&self) -> Vec<ScannedItem> {
