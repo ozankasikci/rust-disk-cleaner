@@ -55,7 +55,7 @@ describe("TrashView", () => {
       render(<TrashView onStatsUpdate={mockOnStatsUpdate} />)
 
       // Should show loading state
-      expect(screen.getByText("Trash")).toBeInTheDocument()
+      expect(screen.getByText("Loading trash...")).toBeInTheDocument()
     })
   })
 
@@ -130,21 +130,23 @@ describe("TrashView", () => {
       })
     })
 
-    it("shows restore selected button (disabled when nothing selected)", async () => {
+    it("shows restore button (disabled when nothing selected)", async () => {
       render(<TrashView onStatsUpdate={mockOnStatsUpdate} />)
 
       await waitFor(() => {
-        const restoreButton = screen.getByRole("button", { name: /restore selected/i })
+        // Button text is just "Restore"
+        const restoreButton = screen.getByRole("button", { name: /^restore$/i })
         expect(restoreButton).toBeInTheDocument()
         expect(restoreButton).toBeDisabled()
       })
     })
 
-    it("shows delete selected button (disabled when nothing selected)", async () => {
+    it("shows delete button (disabled when nothing selected)", async () => {
       render(<TrashView onStatsUpdate={mockOnStatsUpdate} />)
 
       await waitFor(() => {
-        const deleteButton = screen.getByRole("button", { name: /delete selected/i })
+        // Button text is just "Delete" (not "Delete Selected")
+        const deleteButton = screen.getByRole("button", { name: /^delete$/i })
         expect(deleteButton).toBeInTheDocument()
         expect(deleteButton).toBeDisabled()
       })
@@ -194,12 +196,12 @@ describe("TrashView", () => {
       fireEvent.click(screen.getByRole("button", { name: /select all/i }))
 
       await waitFor(() => {
-        const restoreButton = screen.getByRole("button", { name: /restore selected/i })
+        const restoreButton = screen.getByRole("button", { name: /^restore$/i })
         expect(restoreButton).not.toBeDisabled()
       })
     })
 
-    it("enables delete selected button when items are selected", async () => {
+    it("enables delete button when items are selected", async () => {
       render(<TrashView onStatsUpdate={mockOnStatsUpdate} />)
 
       await waitFor(() => {
@@ -209,7 +211,7 @@ describe("TrashView", () => {
       fireEvent.click(screen.getByRole("button", { name: /select all/i }))
 
       await waitFor(() => {
-        const deleteButton = screen.getByRole("button", { name: /delete selected/i })
+        const deleteButton = screen.getByRole("button", { name: /^delete$/i })
         expect(deleteButton).not.toBeDisabled()
       })
     })
@@ -220,7 +222,7 @@ describe("TrashView", () => {
       mockListTrash.mockResolvedValue(mockTrashItems)
     })
 
-    it("calls restoreItems when clicking restore selected", async () => {
+    it("calls restoreItems when clicking restore", async () => {
       render(<TrashView onStatsUpdate={mockOnStatsUpdate} />)
 
       await waitFor(() => {
@@ -230,17 +232,17 @@ describe("TrashView", () => {
       fireEvent.click(screen.getByRole("button", { name: /select all/i }))
 
       await waitFor(() => {
-        expect(screen.getByRole("button", { name: /restore selected/i })).not.toBeDisabled()
+        expect(screen.getByRole("button", { name: /^restore$/i })).not.toBeDisabled()
       })
 
-      fireEvent.click(screen.getByRole("button", { name: /restore selected/i }))
+      fireEvent.click(screen.getByRole("button", { name: /^restore$/i }))
 
       await waitFor(() => {
         expect(mockRestoreItems).toHaveBeenCalledWith(["1", "2"])
       })
     })
 
-    it("clears selection after restore", async () => {
+    it("shows empty state after restoring all items", async () => {
       render(<TrashView onStatsUpdate={mockOnStatsUpdate} />)
 
       await waitFor(() => {
@@ -253,10 +255,11 @@ describe("TrashView", () => {
         expect(screen.getByText("2 selected")).toBeInTheDocument()
       })
 
-      fireEvent.click(screen.getByRole("button", { name: /restore selected/i }))
+      fireEvent.click(screen.getByRole("button", { name: /^restore$/i }))
 
       await waitFor(() => {
-        expect(screen.getByText("0 selected")).toBeInTheDocument()
+        // After restoring all items, trash should show empty state
+        expect(screen.getByText("Trash is empty")).toBeInTheDocument()
       })
     })
   })
@@ -266,7 +269,7 @@ describe("TrashView", () => {
       mockListTrash.mockResolvedValue(mockTrashItems)
     })
 
-    it("calls permanentlyDeleteItems when clicking delete selected", async () => {
+    it("calls permanentlyDelete for each selected item", async () => {
       render(<TrashView onStatsUpdate={mockOnStatsUpdate} />)
 
       await waitFor(() => {
@@ -276,17 +279,19 @@ describe("TrashView", () => {
       fireEvent.click(screen.getByRole("button", { name: /select all/i }))
 
       await waitFor(() => {
-        expect(screen.getByRole("button", { name: /delete selected/i })).not.toBeDisabled()
+        expect(screen.getByRole("button", { name: /^delete$/i })).not.toBeDisabled()
       })
 
-      fireEvent.click(screen.getByRole("button", { name: /delete selected/i }))
+      fireEvent.click(screen.getByRole("button", { name: /^delete$/i }))
 
       await waitFor(() => {
-        expect(mockPermanentlyDeleteItems).toHaveBeenCalledWith(["1", "2"])
+        // The useTrash hook calls permanentlyDelete for each item
+        expect(mockPermanentlyDelete).toHaveBeenCalledWith("1")
+        expect(mockPermanentlyDelete).toHaveBeenCalledWith("2")
       })
     })
 
-    it("clears selection after delete", async () => {
+    it("shows empty state after deleting all items", async () => {
       render(<TrashView onStatsUpdate={mockOnStatsUpdate} />)
 
       await waitFor(() => {
@@ -299,14 +304,15 @@ describe("TrashView", () => {
         expect(screen.getByText("2 selected")).toBeInTheDocument()
       })
 
-      fireEvent.click(screen.getByRole("button", { name: /delete selected/i }))
+      fireEvent.click(screen.getByRole("button", { name: /^delete$/i }))
 
       await waitFor(() => {
-        expect(screen.getByText("0 selected")).toBeInTheDocument()
+        // After deleting all items, trash should show empty state
+        expect(screen.getByText("Trash is empty")).toBeInTheDocument()
       })
     })
 
-    it("reloads list after delete", async () => {
+    it("removes deleted items from list without calling listTrash again", async () => {
       render(<TrashView onStatsUpdate={mockOnStatsUpdate} />)
 
       await waitFor(() => {
@@ -319,13 +325,16 @@ describe("TrashView", () => {
       fireEvent.click(screen.getByRole("button", { name: /select all/i }))
 
       await waitFor(() => {
-        expect(screen.getByRole("button", { name: /delete selected/i })).not.toBeDisabled()
+        expect(screen.getByRole("button", { name: /^delete$/i })).not.toBeDisabled()
       })
 
-      fireEvent.click(screen.getByRole("button", { name: /delete selected/i }))
+      fireEvent.click(screen.getByRole("button", { name: /^delete$/i }))
 
       await waitFor(() => {
-        expect(mockListTrash).toHaveBeenCalled()
+        // permanentlyDelete should be called for each item
+        expect(mockPermanentlyDelete).toHaveBeenCalledTimes(2)
+        // Should NOT reload from backend - just update local state
+        expect(mockListTrash).not.toHaveBeenCalled()
       })
     })
   })
@@ -345,12 +354,12 @@ describe("TrashView", () => {
       fireEvent.click(screen.getByRole("button", { name: /empty trash/i }))
 
       await waitFor(() => {
-        expect(screen.getByText("Empty Trash?")).toBeInTheDocument()
-        expect(screen.getByText(/this will permanently delete/i)).toBeInTheDocument()
+        expect(screen.getByText("Empty Trash Permanently?")).toBeInTheDocument()
+        expect(screen.getByText(/This will permanently delete/i)).toBeInTheDocument()
       })
     })
 
-    it("calls purgeTrash when confirming empty trash", async () => {
+    it("calls permanentlyDelete for each item when confirming empty trash", async () => {
       render(<TrashView onStatsUpdate={mockOnStatsUpdate} />)
 
       await waitFor(() => {
@@ -360,34 +369,37 @@ describe("TrashView", () => {
       fireEvent.click(screen.getByRole("button", { name: /empty trash/i }))
 
       await waitFor(() => {
-        expect(screen.getByRole("button", { name: /delete permanently/i })).toBeInTheDocument()
+        expect(screen.getByRole("button", { name: /^delete permanently$/i })).toBeInTheDocument()
       })
 
-      fireEvent.click(screen.getByRole("button", { name: /delete permanently/i }))
+      fireEvent.click(screen.getByRole("button", { name: /^delete permanently$/i }))
 
       await waitFor(() => {
-        expect(mockPurgeTrash).toHaveBeenCalled()
+        // The useTrash hook's purge calls permanentlyDelete for each item
+        expect(mockPermanentlyDelete).toHaveBeenCalledWith("1")
+        expect(mockPermanentlyDelete).toHaveBeenCalledWith("2")
       })
     })
 
-    it("does not call purgeTrash when canceling", async () => {
+    it("does not call permanentlyDelete when canceling", async () => {
       render(<TrashView onStatsUpdate={mockOnStatsUpdate} />)
 
       await waitFor(() => {
         expect(screen.getByRole("button", { name: /empty trash/i })).toBeInTheDocument()
       })
 
+      mockPermanentlyDelete.mockClear()
+
       fireEvent.click(screen.getByRole("button", { name: /empty trash/i }))
 
       await waitFor(() => {
-        expect(screen.getByRole("button", { name: /cancel/i })).toBeInTheDocument()
+        expect(screen.getByRole("button", { name: /^cancel$/i })).toBeInTheDocument()
       })
 
-      fireEvent.click(screen.getByRole("button", { name: /cancel/i }))
+      fireEvent.click(screen.getByRole("button", { name: /^cancel$/i }))
 
-      await waitFor(() => {
-        expect(mockPurgeTrash).not.toHaveBeenCalled()
-      })
+      // Should not have called permanentlyDelete after canceling
+      expect(mockPermanentlyDelete).not.toHaveBeenCalled()
     })
   })
 
@@ -401,7 +413,7 @@ describe("TrashView", () => {
 
       await waitFor(() => {
         // Each item should have a restore button (with title)
-        const restoreButtons = screen.getAllByTitle("Restore")
+        const restoreButtons = screen.getAllByTitle("Restore to original location")
         expect(restoreButtons.length).toBe(2)
       })
     })
@@ -420,11 +432,11 @@ describe("TrashView", () => {
       render(<TrashView onStatsUpdate={mockOnStatsUpdate} />)
 
       await waitFor(() => {
-        expect(screen.getAllByTitle("Restore").length).toBe(2)
+        expect(screen.getAllByTitle("Restore to original location").length).toBe(2)
       })
 
       // Click first restore button
-      fireEvent.click(screen.getAllByTitle("Restore")[0])
+      fireEvent.click(screen.getAllByTitle("Restore to original location")[0])
 
       await waitFor(() => {
         expect(mockRestoreItems).toHaveBeenCalledWith(["1"])
@@ -493,10 +505,10 @@ describe("TrashView", () => {
       fireEvent.click(screen.getByRole("button", { name: /select all/i }))
 
       await waitFor(() => {
-        expect(screen.getByRole("button", { name: /restore selected/i })).not.toBeDisabled()
+        expect(screen.getByRole("button", { name: /^restore$/i })).not.toBeDisabled()
       })
 
-      fireEvent.click(screen.getByRole("button", { name: /restore selected/i }))
+      fireEvent.click(screen.getByRole("button", { name: /^restore$/i }))
 
       await waitFor(() => {
         expect(screen.getByText("Restore failed")).toBeInTheDocument()
