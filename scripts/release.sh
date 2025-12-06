@@ -57,7 +57,7 @@ sign_app() {
     echo "Signed: $app_path"
 }
 
-# Function to create DMG from signed app
+# Function to create DMG from signed app with Applications shortcut
 create_dmg() {
     local arch=$1
     local target=$2
@@ -65,11 +65,21 @@ create_dmg() {
     local app_path="$TAURI_DIR/target/$target/release/bundle/macos/${APP_NAME}.app"
     local output_dir="$PROJECT_ROOT/release"
     local dmg_path="$output_dir/$dmg_name"
+    local dmg_temp_dir=$(mktemp -d)
 
     echo "=== Creating DMG for $arch ==="
     mkdir -p "$output_dir"
     rm -f "$dmg_path"
-    hdiutil create -volname "$APP_NAME" -srcfolder "$app_path" -ov -format UDZO "$dmg_path"
+
+    # Copy signed app and create Applications symlink
+    cp -R "$app_path" "$dmg_temp_dir/"
+    ln -s /Applications "$dmg_temp_dir/Applications"
+
+    # Create DMG with both app and Applications shortcut
+    hdiutil create -volname "$APP_NAME" -srcfolder "$dmg_temp_dir" -ov -format UDZO "$dmg_path"
+
+    # Cleanup
+    rm -rf "$dmg_temp_dir"
     echo "DMG created at $dmg_path"
 }
 
