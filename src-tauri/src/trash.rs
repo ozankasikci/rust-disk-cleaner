@@ -562,4 +562,129 @@ mod tests {
         manager.restore_item(&item.id).unwrap();
         assert!(file_path.exists());
     }
+
+    #[test]
+    fn test_purge_old_items() {
+        let (_trash_dir, source_dir, manager) = setup_test_env();
+
+        let file1 = create_test_file(&source_dir, "old1.txt", "content1");
+        let file2 = create_test_file(&source_dir, "old2.txt", "content2");
+
+        manager.move_to_trash(file1).unwrap();
+        manager.move_to_trash(file2).unwrap();
+
+        // Try to purge items older than 0 days (should purge all)
+        let purged = manager.purge_old_items(0).unwrap();
+        assert_eq!(purged, 2);
+        assert_eq!(manager.list_items().len(), 0);
+    }
+
+    #[test]
+    fn test_purge_old_items_keeps_recent() {
+        let (_trash_dir, source_dir, manager) = setup_test_env();
+
+        let file1 = create_test_file(&source_dir, "recent.txt", "content");
+        manager.move_to_trash(file1).unwrap();
+
+        // Purge items older than 30 days (should keep recent items)
+        let purged = manager.purge_old_items(30).unwrap();
+        assert_eq!(purged, 0);
+        assert_eq!(manager.list_items().len(), 1);
+    }
+
+    #[test]
+    fn test_trash_item_from_internal() {
+        let internal = TrashItemInternal {
+            id: "test-id".to_string(),
+            original_path: PathBuf::from("/original/path"),
+            trash_path: PathBuf::from("/trash/path"),
+            size: 1000,
+            name: "test.txt".to_string(),
+            deleted_at: Utc::now(),
+        };
+
+        let item: TrashItem = internal.clone().into();
+
+        assert_eq!(item.id, "test-id");
+        assert_eq!(item.original_path, "/original/path");
+        assert_eq!(item.trash_path, "/trash/path");
+        assert_eq!(item.size, 1000);
+        assert_eq!(item.name, "test.txt");
+    }
+
+    #[test]
+    fn test_trash_item_serialization() {
+        let item = TrashItem {
+            id: "test-id".to_string(),
+            original_path: "/original/path".to_string(),
+            trash_path: "/trash/path".to_string(),
+            size: 2000,
+            name: "file.txt".to_string(),
+            deleted_at: Utc::now(),
+        };
+
+        let json = serde_json::to_string(&item).unwrap();
+        assert!(json.contains("\"id\":\"test-id\""));
+        assert!(json.contains("\"size\":2000"));
+        assert!(json.contains("\"name\":\"file.txt\""));
+
+        let deserialized: TrashItem = serde_json::from_str(&json).unwrap();
+        assert_eq!(deserialized.id, item.id);
+        assert_eq!(deserialized.size, item.size);
+    }
+
+    #[test]
+    fn test_trash_item_internal_serialization() {
+        let item = TrashItemInternal {
+            id: "internal-id".to_string(),
+            original_path: PathBuf::from("/original"),
+            trash_path: PathBuf::from("/trash"),
+            size: 3000,
+            name: "internal.txt".to_string(),
+            deleted_at: Utc::now(),
+        };
+
+        let json = serde_json::to_string(&item).unwrap();
+        assert!(json.contains("\"id\":\"internal-id\""));
+
+        let deserialized: TrashItemInternal = serde_json::from_str(&json).unwrap();
+        assert_eq!(deserialized.id, item.id);
+        assert_eq!(deserialized.size, item.size);
+    }
+
+    #[test]
+    fn test_trash_metadata_empty() {
+        let (_trash_dir, _source_dir, manager) = setup_test_env();
+
+        // Fresh manager should have empty items
+        let items = manager.list_items();
+        assert!(items.is_empty());
+    }
+
+    #[test]
+    fn test_get_size_for_file() {
+        let source_dir = TempDir::new().unwrap();
+        let content = "x".repeat(500);
+        let file_path = create_test_file(&source_dir, "size_test.txt", &content);
+
+        let size = TrashManager::get_size(&file_path);
+        assert_eq!(size, 500);
+    }
+
+    #[test]
+    fn test_get_size_for_directory() {
+        let source_dir = TempDir::new().unwrap();
+        let dir_path = create_test_dir(&source_dir, "size_dir");
+
+        let size = TrashManager::get_size(&dir_path);
+        // Should include sizes of file1.txt (14 bytes) and file2.txt (14 bytes)
+        assert_eq!(size, 28); // "test content 1" + "test content 2"
+    }
+
+    #[test]
+    fn test_trash_manager_new() {
+        // Test that TrashManager::new() works (uses default home directory)
+        let result = TrashManager::new();
+        assert!(result.is_ok());
+    }
 }
