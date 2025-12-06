@@ -2,7 +2,12 @@
 set -e
 
 # Release script for RustDiskCleaner
-# Builds, signs, notarizes, creates DMGs, publishes to GitHub, and updates Homebrew
+# This script builds, signs, notarizes, creates DMGs, publishes to GitHub, and updates Homebrew
+
+# Load environment variables from .env if it exists
+if [ -f "$(dirname "$0")/../.env" ]; then
+    source "$(dirname "$0")/../.env"
+fi
 
 # Configuration
 APP_NAME="RustDiskCleaner"
@@ -56,7 +61,7 @@ sign_app() {
 create_dmg() {
     local arch=$1
     local target=$2
-    local dmg_name="RustDiskCleaner_${VERSION}_${arch}.dmg"
+    local dmg_name="${APP_NAME}_${VERSION}_${arch}.dmg"
     local app_path="$TAURI_DIR/target/$target/release/bundle/macos/${APP_NAME}.app"
     local output_dir="$PROJECT_ROOT/release"
     local dmg_path="$output_dir/$dmg_name"
@@ -64,14 +69,14 @@ create_dmg() {
     echo "=== Creating DMG for $arch ==="
     mkdir -p "$output_dir"
     rm -f "$dmg_path"
-    hdiutil create -volname "RustDiskCleaner" -srcfolder "$app_path" -ov -format UDZO "$dmg_path"
+    hdiutil create -volname "$APP_NAME" -srcfolder "$app_path" -ov -format UDZO "$dmg_path"
     echo "DMG created at $dmg_path"
 }
 
 # Function to sign DMG
 sign_dmg() {
     local arch=$1
-    local dmg_name="RustDiskCleaner_${VERSION}_${arch}.dmg"
+    local dmg_name="${APP_NAME}_${VERSION}_${arch}.dmg"
     local dmg_path="$PROJECT_ROOT/release/$dmg_name"
 
     echo "=== Signing DMG for $arch ==="
@@ -82,7 +87,7 @@ sign_dmg() {
 # Function to notarize DMG
 notarize_dmg() {
     local arch=$1
-    local dmg_name="RustDiskCleaner_${VERSION}_${arch}.dmg"
+    local dmg_name="${APP_NAME}_${VERSION}_${arch}.dmg"
     local dmg_path="$PROJECT_ROOT/release/$dmg_name"
 
     echo "=== Notarizing DMG for $arch ==="
@@ -100,7 +105,7 @@ notarize_dmg() {
 # Function to calculate SHA256
 calc_sha256() {
     local arch=$1
-    local dmg_name="RustDiskCleaner_${VERSION}_${arch}.dmg"
+    local dmg_name="${APP_NAME}_${VERSION}_${arch}.dmg"
     local dmg_path="$PROJECT_ROOT/release/$dmg_name"
 
     shasum -a 256 "$dmg_path" | awk '{print $1}'
@@ -108,31 +113,32 @@ calc_sha256() {
 
 # Function to create GitHub release
 create_github_release() {
-    local aarch64_dmg="$PROJECT_ROOT/release/RustDiskCleaner_${VERSION}_aarch64.dmg"
-    local x64_dmg="$PROJECT_ROOT/release/RustDiskCleaner_${VERSION}_x64.dmg"
+    local aarch64_dmg="$PROJECT_ROOT/release/${APP_NAME}_${VERSION}_aarch64.dmg"
     local aarch64_sha=$(calc_sha256 "aarch64")
-    local x64_sha=$(calc_sha256 "x64")
 
     echo "=== Creating GitHub Release ==="
 
-    # Create and push tag
-    git tag "v$VERSION" 2>/dev/null || echo "Tag v$VERSION already exists"
-    git push origin "v$VERSION" 2>/dev/null || echo "Tag already pushed"
+    # Delete existing release and tag if they exist
+    gh release delete "v$VERSION" --repo "$GITHUB_REPO" --yes 2>/dev/null || true
+    git tag -d "v$VERSION" 2>/dev/null || true
+    git push origin --delete "v$VERSION" 2>/dev/null || true
 
-    # Create release with DMGs
+    # Create and push tag
+    git tag "v$VERSION"
+    git push origin "v$VERSION"
+
+    # Create release with DMG
     gh release create "v$VERSION" \
         "$aarch64_dmg" \
-        "$x64_dmg" \
+        --repo "$GITHUB_REPO" \
         --title "v$VERSION" \
         --notes "## Downloads
 
-- **Apple Silicon (M1/M2/M3)**: \`RustDiskCleaner_${VERSION}_aarch64.dmg\`
-- **Intel**: \`RustDiskCleaner_${VERSION}_x64.dmg\`
+- **Apple Silicon (M1/M2/M3)**: \`${APP_NAME}_${VERSION}_aarch64.dmg\`
 
 ## SHA256 Checksums
 \`\`\`
-$aarch64_sha  RustDiskCleaner_${VERSION}_aarch64.dmg
-$x64_sha  RustDiskCleaner_${VERSION}_x64.dmg
+$aarch64_sha  ${APP_NAME}_${VERSION}_aarch64.dmg
 \`\`\`
 
 ## Install via Homebrew
@@ -148,7 +154,6 @@ brew install --cask rust-disk-cleaner
 # Function to update Homebrew tap
 update_homebrew() {
     local aarch64_sha=$(calc_sha256 "aarch64")
-    local x64_sha=$(calc_sha256 "x64")
     local tmp_dir=$(mktemp -d)
 
     echo "=== Updating Homebrew Tap ==="
@@ -159,28 +164,21 @@ update_homebrew() {
     cat > homebrew-tap/Casks/rust-disk-cleaner.rb << EOF
 cask "rust-disk-cleaner" do
   version "$VERSION"
+  sha256 "$aarch64_sha"
 
-  on_arm do
-    sha256 "$aarch64_sha"
-    url "https://github.com/$GITHUB_REPO/releases/download/v#{version}/RustDiskCleaner_#{version}_aarch64.dmg"
-  end
+  url "https://github.com/$GITHUB_REPO/releases/download/v#{version}/${APP_NAME}_#{version}_aarch64.dmg"
 
-  on_intel do
-    sha256 "$x64_sha"
-    url "https://github.com/$GITHUB_REPO/releases/download/v#{version}/RustDiskCleaner_#{version}_x64.dmg"
-  end
+  depends_on arch: :arm64
 
   name "RustDiskCleaner"
   desc "Fast disk space analyzer and cleaner for macOS"
   homepage "https://github.com/$GITHUB_REPO"
 
-  depends_on macos: ">= :monterey"
-
-  app "RustDiskCleaner.app"
+  app "${APP_NAME}.app"
 
   zap trash: [
-    "~/Library/Preferences/$BUNDLE_ID.plist",
-    "~/Library/Saved Application State/$BUNDLE_ID.savedState",
+    "~/Library/Preferences/com.ozan.rustdiskcleaner.plist",
+    "~/Library/Saved Application State/com.ozan.rustdiskcleaner.savedState",
   ]
 end
 EOF
@@ -202,7 +200,6 @@ main() {
     local skip_notarize=false
     local skip_github=false
     local skip_homebrew=false
-    local arch_filter=""
 
     # Parse arguments
     while [[ $# -gt 0 ]]; do
@@ -223,10 +220,6 @@ main() {
                 skip_homebrew=true
                 shift
                 ;;
-            --arch)
-                arch_filter=$2
-                shift 2
-                ;;
             --help)
                 echo "Usage: $0 [options]"
                 echo ""
@@ -235,7 +228,6 @@ main() {
                 echo "  --skip-notarize   Skip notarization (for testing)"
                 echo "  --skip-github     Skip GitHub release creation"
                 echo "  --skip-homebrew   Skip Homebrew tap update"
-                echo "  --arch <arch>     Build only for specific arch (aarch64 or x64)"
                 echo "  --help            Show this help message"
                 exit 0
                 ;;
@@ -246,49 +238,26 @@ main() {
         esac
     done
 
-    # Determine which architectures to build
-    local archs=()
-    if [ -z "$arch_filter" ]; then
-        archs=("aarch64" "x64")
-    else
-        archs=("$arch_filter")
-    fi
-
-    # Helper function to map arch to target
-    get_target() {
-        case "$1" in
-            aarch64) echo "aarch64-apple-darwin" ;;
-            x64) echo "x86_64-apple-darwin" ;;
-        esac
-    }
+    local arch="aarch64"
+    local target="aarch64-apple-darwin"
 
     # Build
     if [ "$skip_build" = false ]; then
-        for arch in "${archs[@]}"; do
-            build_arch "$arch" "$(get_target "$arch")"
-        done
+        build_arch "$arch" "$target"
     fi
 
-    # Sign apps
-    for arch in "${archs[@]}"; do
-        sign_app "$arch" "$(get_target "$arch")"
-    done
+    # Sign app
+    sign_app "$arch" "$target"
 
-    # Create DMGs
-    for arch in "${archs[@]}"; do
-        create_dmg "$arch" "$(get_target "$arch")"
-    done
+    # Create DMG
+    create_dmg "$arch" "$target"
 
-    # Sign DMGs
-    for arch in "${archs[@]}"; do
-        sign_dmg "$arch"
-    done
+    # Sign DMG
+    sign_dmg "$arch"
 
-    # Notarize DMGs
+    # Notarize DMG
     if [ "$skip_notarize" = false ]; then
-        for arch in "${archs[@]}"; do
-            notarize_dmg "$arch"
-        done
+        notarize_dmg "$arch"
     fi
 
     # Print summary
@@ -296,13 +265,11 @@ main() {
     echo "=== Build Complete ==="
     echo "Version: $VERSION"
     echo ""
-    echo "DMG files in $PROJECT_ROOT/release/:"
-    for arch in "${archs[@]}"; do
-        local dmg_name="RustDiskCleaner_${VERSION}_${arch}.dmg"
-        local sha=$(calc_sha256 "$arch")
-        echo "  $dmg_name"
-        echo "    SHA256: $sha"
-    done
+    echo "DMG file in $PROJECT_ROOT/release/:"
+    local dmg_name="${APP_NAME}_${VERSION}_${arch}.dmg"
+    local sha=$(calc_sha256 "$arch")
+    echo "  $dmg_name"
+    echo "    SHA256: $sha"
 
     # Create GitHub release
     if [ "$skip_github" = false ]; then
