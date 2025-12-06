@@ -1,20 +1,10 @@
-export type CategoryId =
-  | "caches"
-  | "dev-artifacts"
-  | "large-files"
-  | "downloads"
-  | "duplicates"
-  | "old-logs"
-  | "unused-apps"
-  | "trash"
-
 export interface ScannedItem {
   id: string
-  name: string
   path: string
   size: number
-  item_type: string
-  group?: string
+  name: string
+  category: string
+  subcategory: string
 }
 
 export interface ScanResult {
@@ -25,13 +15,11 @@ export interface ScanResult {
 
 export interface TrashItem {
   id: string
-  name: string
   original_path: string
+  trash_path: string
   size: number
+  name: string
   deleted_at: string
 }
 
-export interface DeleteResult {
-  deleted: number
-  failed: string[]
-}
+export type CategoryId = "caches" | "dev-artifacts" | "large-files" | "downloads" | "duplicates" | "old-logs" | "unused-apps" | "trash"
