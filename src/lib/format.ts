@@ -1,3 +1,4 @@
+/** Format bytes into human-readable string (e.g., 1.5 GB) */
 export function formatBytes(bytes: number): string {
   if (bytes === 0) return "0 B"
 
@@ -8,6 +9,7 @@ export function formatBytes(bytes: number): string {
   return `${parseFloat((bytes / Math.pow(k, i)).toFixed(1))} ${units[i]}`
 }
 
+/** Format ISO date string into localized date/time */
 export function formatDate(dateString: string): string {
   const date = new Date(dateString)
   return date.toLocaleDateString(undefined, {

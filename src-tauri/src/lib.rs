@@ -1,3 +1,5 @@
+//! RustDiskCleaner - A fast disk space analyzer and cleaner for macOS
+
 mod commands;
 mod config;
 mod scanner;

@@ -1,3 +1,5 @@
+//! Trash management with restore capability
+
 use std::fs;
 use std::path::PathBuf;
 use serde::{Deserialize, Serialize};

@@ -5,7 +5,7 @@ import { FileList } from "./file-list"
 import { TrashView } from "./trash-view"
 import { ErrorBanner } from "./error-banner"
 import { formatBytes } from "@/lib/format"
-import { deleteItems, scanCategory, listTrash } from "@/lib/tauri"
+import { deleteItems, scanCategory } from "@/lib/tauri"
 import type { CategoryId, ScannedItem } from "@/types"
 
 interface ScanData {

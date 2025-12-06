@@ -1,3 +1,5 @@
+//! Directory scanner for finding files by category
+
 use std::fs;
 use std::path::{Path, PathBuf};
 use serde::{Deserialize, Serialize};
@@ -5,6 +7,7 @@ use walkdir::WalkDir;
 use rayon::prelude::*;
 use uuid::Uuid;
 
+/// Represents a scanned file item with metadata
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ScannedItem {
     pub id: String,
