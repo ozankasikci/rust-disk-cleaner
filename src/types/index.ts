@@ -22,3 +22,16 @@ export interface ScanResult {
   total_size: number
   item_count: number
 }
+
+export interface TrashItem {
+  id: string
+  name: string
+  original_path: string
+  size: number
+  deleted_at: string
+}
+
+export interface DeleteResult {
+  deleted: number
+  failed: string[]
+}
