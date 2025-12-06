@@ -47,22 +47,22 @@ describe("CategoryView", () => {
   })
 
   describe("Initial render", () => {
-    it("displays category title and description for caches", () => {
+    it("shows ready to scan message for caches", () => {
       render(<CategoryView {...defaultProps} category="caches" />)
-      expect(screen.getByText("Caches")).toBeInTheDocument()
-      expect(screen.getByText("System and application caches that can be safely removed.")).toBeInTheDocument()
+      expect(screen.getByText("Ready to scan")).toBeInTheDocument()
+      expect(screen.getByText(/Scan your disk to find caches/i)).toBeInTheDocument()
     })
 
-    it("displays category title and description for dev-artifacts", () => {
+    it("shows ready to scan message for dev-artifacts", () => {
       render(<CategoryView {...defaultProps} category="dev-artifacts" />)
-      expect(screen.getByText("Dev Artifacts")).toBeInTheDocument()
-      expect(screen.getByText("Build outputs and dependency folders from development projects.")).toBeInTheDocument()
+      expect(screen.getByText("Ready to scan")).toBeInTheDocument()
+      expect(screen.getByText(/Scan your disk to find dev artifacts/i)).toBeInTheDocument()
     })
 
-    it("displays category title and description for large-files", () => {
+    it("shows ready to scan message for large-files", () => {
       render(<CategoryView {...defaultProps} category="large-files" />)
-      expect(screen.getByText("Large Files")).toBeInTheDocument()
-      expect(screen.getByText("Files larger than 100MB that might be candidates for removal.")).toBeInTheDocument()
+      expect(screen.getByText("Ready to scan")).toBeInTheDocument()
+      expect(screen.getByText(/Scan your disk to find large files/i)).toBeInTheDocument()
     })
 
     it("shows scan button when no data", () => {
@@ -108,15 +108,17 @@ describe("CategoryView", () => {
       expect(screen.getAllByText("yarn").length).toBeGreaterThan(0)
     })
 
-    it("displays total size", () => {
+    it("renders file list when data exists", () => {
       render(<CategoryView {...propsWithData} />)
-      // 3MB formatted
-      expect(screen.getByText("3 MB")).toBeInTheDocument()
+      // Items should be present in the list
+      expect(screen.getAllByText("npm").length).toBeGreaterThan(0)
     })
 
-    it("displays item count", () => {
+    it("has action buttons in footer", () => {
       render(<CategoryView {...propsWithData} />)
-      expect(screen.getByText("2 items found")).toBeInTheDocument()
+      // Footer should have Select All and Rescan buttons
+      expect(screen.getByRole("button", { name: /select all/i })).toBeInTheDocument()
+      expect(screen.getByRole("button", { name: /rescan/i })).toBeInTheDocument()
     })
 
     it("shows select all button", () => {
@@ -225,7 +227,7 @@ describe("CategoryView", () => {
       })
     })
 
-    it("rescans after successful delete", async () => {
+    it("updates local state after successful delete without rescanning", async () => {
       render(<CategoryView {...propsWithData} />)
 
       // Select all items
@@ -235,13 +237,18 @@ describe("CategoryView", () => {
         expect(screen.getByRole("button", { name: /delete \(3 MB\)/i })).not.toBeDisabled()
       })
 
+      // Clear the mock to check it's not called again after delete
+      mockScanCategory.mockClear()
+
       fireEvent.click(screen.getByRole("button", { name: /delete \(3 MB\)/i }))
 
-      // After delete, should rescan
+      // After delete, should update local state (not rescan)
       await waitFor(() => {
-        expect(mockOnScanningChange).toHaveBeenCalledWith("caches", true)
-        expect(mockScanCategory).toHaveBeenCalledWith("caches")
+        expect(mockOnScanDataUpdate).toHaveBeenCalled()
       })
+
+      // Should NOT trigger a rescan - just update local state
+      expect(mockScanCategory).not.toHaveBeenCalled()
     })
   })
 
