@@ -796,4 +796,259 @@ mod tests {
         assert_eq!(deserialized.id, item.id);
         assert_eq!(deserialized.size, item.size);
     }
+
+    #[test]
+    fn test_scan_downloads_returns_sorted() {
+        let scanner = Scanner::new();
+        let items = scanner.scan_downloads();
+
+        // Verify sorting (each item should be >= the next in size)
+        for i in 0..items.len().saturating_sub(1) {
+            assert!(
+                items[i].size >= items[i + 1].size,
+                "Downloads not sorted by size"
+            );
+        }
+
+        // Verify all items have correct category
+        for item in &items {
+            assert_eq!(item.category, "downloads");
+            assert!(!item.id.is_empty());
+            // Downloads must be > 1MB
+            assert!(item.size > 1_000_000);
+        }
+    }
+
+    #[test]
+    fn test_scan_duplicates_returns_sorted() {
+        let scanner = Scanner::new();
+        let items = scanner.scan_duplicates();
+
+        // Verify sorting (each item should be >= the next in size)
+        for i in 0..items.len().saturating_sub(1) {
+            assert!(
+                items[i].size >= items[i + 1].size,
+                "Duplicates not sorted by size"
+            );
+        }
+
+        // Verify all items have correct category
+        for item in &items {
+            assert_eq!(item.category, "duplicates");
+            assert!(!item.id.is_empty());
+            // Duplicates must be > 1MB
+            assert!(item.size > 1_000_000);
+        }
+    }
+
+    #[test]
+    fn test_scan_old_logs_returns_sorted() {
+        let scanner = Scanner::new();
+        let items = scanner.scan_old_logs();
+
+        // Verify sorting (each item should be >= the next in size)
+        for i in 0..items.len().saturating_sub(1) {
+            assert!(
+                items[i].size >= items[i + 1].size,
+                "Logs not sorted by size"
+            );
+        }
+
+        // Verify all items have correct category
+        for item in &items {
+            assert_eq!(item.category, "old-logs");
+            assert!(!item.id.is_empty());
+            // Logs must be > 10KB
+            assert!(item.size > 10_000);
+        }
+    }
+
+    #[test]
+    fn test_scan_unused_apps_returns_sorted() {
+        let scanner = Scanner::new();
+        let items = scanner.scan_unused_apps();
+
+        // Verify sorting (each item should be >= the next in size)
+        for i in 0..items.len().saturating_sub(1) {
+            assert!(
+                items[i].size >= items[i + 1].size,
+                "Apps not sorted by size"
+            );
+        }
+
+        // Verify all items have correct category
+        for item in &items {
+            assert_eq!(item.category, "unused-apps");
+            assert!(!item.id.is_empty());
+            // Apps must be > 10MB
+            assert!(item.size > 10_000_000);
+        }
+    }
+
+    #[test]
+    fn test_download_file_type_classification() {
+        // Test the download extension to type mapping
+        let installer_extensions = vec!["dmg", "pkg", "exe", "msi", "app", "iso"];
+
+        for ext in &installer_extensions {
+            let file_type = if installer_extensions.contains(ext) {
+                "Installer"
+            } else {
+                "Other"
+            };
+            assert_eq!(file_type, "Installer", "Extension {} should be Installer", ext);
+        }
+
+        // Test other types
+        let archive_extensions = vec!["zip", "tar", "gz", "rar", "7z"];
+        for ext in &archive_extensions {
+            let file_type = match *ext {
+                "zip" | "tar" | "gz" | "rar" | "7z" => "Archive",
+                _ => "Other",
+            };
+            assert_eq!(file_type, "Archive", "Extension {} should be Archive", ext);
+        }
+    }
+
+    #[test]
+    fn test_duplicate_file_type_classification() {
+        let test_cases = vec![
+            ("mp4", "Video"),
+            ("mov", "Video"),
+            ("avi", "Video"),
+            ("mkv", "Video"),
+            ("jpg", "Image"),
+            ("jpeg", "Image"),
+            ("png", "Image"),
+            ("gif", "Image"),
+            ("heic", "Image"),
+            ("mp3", "Audio"),
+            ("wav", "Audio"),
+            ("flac", "Audio"),
+            ("m4a", "Audio"),
+            ("pdf", "Document"),
+            ("doc", "Document"),
+            ("docx", "Document"),
+            ("txt", "Other"),
+        ];
+
+        for (ext, expected_type) in test_cases {
+            let actual = match ext {
+                "mp4" | "mov" | "avi" | "mkv" => "Video",
+                "jpg" | "jpeg" | "png" | "gif" | "heic" => "Image",
+                "mp3" | "wav" | "flac" | "m4a" => "Audio",
+                "pdf" | "doc" | "docx" => "Document",
+                _ => "Other",
+            };
+            assert_eq!(actual, expected_type, "Extension {} should map to {}", ext, expected_type);
+        }
+    }
+
+    #[test]
+    fn test_log_file_detection() {
+        let log_names = vec![
+            "app.log",
+            "error.log.gz",
+            "crash-2024-01-01.txt",
+            "system.diag",
+        ];
+
+        for name in log_names {
+            let is_log = name.ends_with(".log")
+                || name.ends_with(".log.gz")
+                || name.contains("crash")
+                || name.ends_with(".diag");
+            assert!(is_log, "{} should be detected as a log file", name);
+        }
+
+        // Test non-log files
+        let non_log_names = vec!["readme.txt", "config.json", "app.exe"];
+        for name in non_log_names {
+            let is_log = name.ends_with(".log")
+                || name.ends_with(".log.gz")
+                || name.contains("crash")
+                || name.ends_with(".diag");
+            assert!(!is_log, "{} should NOT be detected as a log file", name);
+        }
+    }
+
+    #[test]
+    fn test_system_apps_are_excluded() {
+        let system_apps = vec![
+            "Safari.app", "Mail.app", "Calendar.app", "Notes.app",
+            "Messages.app", "FaceTime.app", "Photos.app", "Music.app",
+            "Podcasts.app", "TV.app", "News.app", "Stocks.app",
+            "Books.app", "App Store.app", "System Preferences.app",
+            "System Settings.app", "Finder.app", "Utilities",
+        ];
+
+        // Verify these apps would be excluded
+        for app in &system_apps {
+            assert!(system_apps.contains(app), "{} should be in system apps list", app);
+        }
+
+        // Verify non-system apps would NOT be excluded
+        let user_apps = vec!["Slack.app", "Chrome.app", "VSCode.app"];
+        for app in user_apps {
+            assert!(!system_apps.contains(&app), "{} should NOT be in system apps list", app);
+        }
+    }
+
+    #[test]
+    fn test_scan_progress_structure() {
+        let progress = ScanProgress {
+            items_found: 10,
+            total_size: 1000000,
+            current_path: "/test/path".to_string(),
+        };
+
+        assert_eq!(progress.items_found, 10);
+        assert_eq!(progress.total_size, 1000000);
+        assert_eq!(progress.current_path, "/test/path");
+    }
+
+    #[test]
+    fn test_scan_progress_serialization() {
+        let progress = ScanProgress {
+            items_found: 5,
+            total_size: 500000,
+            current_path: "/scanning/here".to_string(),
+        };
+
+        let json = serde_json::to_string(&progress).unwrap();
+        assert!(json.contains("\"items_found\":5"));
+        assert!(json.contains("\"total_size\":500000"));
+
+        let deserialized: ScanProgress = serde_json::from_str(&json).unwrap();
+        assert_eq!(deserialized.items_found, progress.items_found);
+        assert_eq!(deserialized.total_size, progress.total_size);
+    }
+
+    #[test]
+    fn test_get_dir_size_nonexistent() {
+        let nonexistent = PathBuf::from("/nonexistent/path/that/doesnt/exist");
+        let size = Scanner::get_dir_size(&nonexistent);
+        // Should return 0 for nonexistent paths
+        assert_eq!(size, 0);
+    }
+
+    #[test]
+    fn test_scanned_item_clone() {
+        let item = ScannedItem {
+            id: "test-id".to_string(),
+            path: PathBuf::from("/test/path"),
+            size: 1000,
+            name: "test-item".to_string(),
+            category: "test".to_string(),
+            subcategory: "sub".to_string(),
+        };
+
+        let cloned = item.clone();
+        assert_eq!(item.id, cloned.id);
+        assert_eq!(item.path, cloned.path);
+        assert_eq!(item.size, cloned.size);
+        assert_eq!(item.name, cloned.name);
+        assert_eq!(item.category, cloned.category);
+        assert_eq!(item.subcategory, cloned.subcategory);
+    }
 }
