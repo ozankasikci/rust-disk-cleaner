@@ -8,6 +8,8 @@
 
 A fast disk space analyzer and cleaner for macOS, built with Tauri, React, and Rust.
 
+![RustDiskCleaner Screenshot](assets/screenshot.png)
+
 ## Features
 
 - Scans directories for large files and caches
