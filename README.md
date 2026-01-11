@@ -33,8 +33,7 @@ A fast disk space analyzer and cleaner for macOS, built with Tauri, React, and R
 ### Homebrew (Recommended)
 
 ```bash
-brew tap ozankasikci/tap
-brew install --cask rust-disk-cleaner
+brew install ozankasikci/tap/rust-disk-cleaner
 ```
 
 To update to the latest version:
